@@ -54,7 +54,7 @@ def get_officers_name():
 
     while correct_officer is False:
         output = input("Enter the name of the officer who's signing the letters: ")
-        print(f"You entered: {output}. Is this correct?")
+        print(f"You entered: {output.upper()}. Is this correct?")
         double_check = pyip.inputMenu(['Yes', 'No'], numbered=True)
         if double_check == 'Yes':
             correct_officer = True
@@ -115,10 +115,12 @@ def write_letter(duty, member, holder, officer):
     second_spacing_paragraph = letter.add_paragraph()
     signing_officer_paragraph = letter.add_paragraph()
     signing_officer_paragraph.add_run(f"\t\t\t\t\t\t\t{officer.upper()}")
+    signing_officer_paragraph.style = letter.styles['Times New Roman']
 
     another_spacing_paragraph = letter.add_paragraph()
     copy_to_paragraph = letter.add_paragraph()
     copy_to_paragraph.add_run("Copy to:\nDIVO FOLDER")
+    copy_to_paragraph.style = letter.styles['Times New Roman']
 
     letter.save(f"{duty} Appointment Letter-{holder} {member}.docx")
 
@@ -137,12 +139,41 @@ get_duties()
 signing_officer = get_officers_name()
 
 # Run loop until every duty, both primary and secondary, is accounted for.
-# for duty in duties:
-#     print(f"Who's going to be the primary for: {duty}?")
-#     primary_holder = pyip.inputMenu(personnel, numbered=True)
-#     holder = "PRIMARY"
-#     write_letter(duty, primary_holder, holder, signing_officer)
+for duty in duties:
+    print(f"Do you know who you want to assign as the primary holder of: {duty}?")
+    check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
+    if check_for_assignment == "Yes":
+        print(f"Who's going to be the primary for: {duty}?")
+        primary_holder = pyip.inputMenu(personnel, numbered=True)
+        holder = "PRIMARY"
+        write_letter(duty, primary_holder, holder, signing_officer)
+    else:
+        come_back_to_duties.append([duty, "PRIMARY"])
 
-write_letter('Crash Cart Coordinator', 'HM2 Kemp', 'PRIMARY', signing_officer)
+    print(f"Do you know who you want to assign as the secondary holder of: {duty}?")
+    check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
+    if check_for_assignment == "Yes":
+        print(f"Who's going to be the secondary for: {duty}?")
+        primary_holder = pyip.inputMenu(personnel, numbered=True)
+        holder = "SECONDARY"
+        write_letter(duty, primary_holder, holder, signing_officer)
+    else:
+        come_back_to_duties.append([duty, "SECONDARY"])
+
+# Make an Excel of duties that still need members assigned.
+duties_left_wb = openpyxl.Workbook()
+ws = duties_left_wb.active
+row_to_write_to = 2
+ws['A1'] = "Unassigned Duties"
+ws['B1'] = "Primary/Secondary"
+for entry in come_back_to_duties:
+    ws[f'A{row_to_write_to}'] = entry[0]
+    ws[f'B{row_to_write_to}'] = entry[1]
+    row_to_write_to += 1
+
+duties_left_wb.save("duties_left.xlsx")
+duties_left_wb.close()
+
+# write_letter('Crash Cart Coordinator', 'HM2 Kemp', 'PRIMARY', signing_officer)
 
 
