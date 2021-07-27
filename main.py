@@ -8,6 +8,7 @@ import pyinputplus as pyip
 import openpyxl
 import docx
 import glob
+import re
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
@@ -60,6 +61,35 @@ def get_officers_name():
             correct_officer = True
 
     return output
+
+def chose_member(message, list_of_members):
+    """Present the user with a list of their personnel and return the chosen member."""
+    print(message)
+    output = pyip.inputMenu(list_of_members, numbered=True)
+    return output
+
+def remove_slashes(duty):
+    """Removing both forward and back slashed from duty names in order to save without throwing an error."""
+    output = re.sub(r'[\\/]', '-', duty)
+    return output
+
+def get_chosen_duties(duties):
+    output = []
+    member_is_picking_duties = True
+    while member_is_picking_duties:
+        print("Which duty do you need to assign?")
+        duty = pyip.inputMenu(duties, numbered=True)
+        print("Is this for the primary or secondary position?")
+        primary_or_secondary = pyip.inputMenu(['Primary', 'Secondary'], numbered=True)
+        output.append([duty, primary_or_secondary])
+        print("Do you need to assign another duty?")
+        more_to_do = pyip.inputMenu(["Yes", "No"], numbered=True)
+        if more_to_do == "Yes":
+            continue
+        else:
+            member_is_picking_duties = False
+    return output
+
 
 def write_letter(duty, member, holder, officer):
     """Writing the actual appointment letter with the individualized duty, member, and current date."""
@@ -122,7 +152,7 @@ def write_letter(duty, member, holder, officer):
     copy_to_paragraph.add_run("Copy to:\nDIVO FOLDER")
     copy_to_paragraph.style = letter.styles['Times New Roman']
 
-    letter.save(f"{duty} Appointment Letter-{holder} {member}.docx")
+    letter.save(f"{remove_slashes(duty)} Appointment Letter-{holder} {member}.docx")
 
 # Setting up blank lists to be filled in from current Excel sheets.
 personnel = []
@@ -138,42 +168,47 @@ get_duties()
 # Set officer's name who's signing the letters
 signing_officer = get_officers_name()
 
-# Run loop until every duty, both primary and secondary, is accounted for.
-for duty in duties:
-    print(f"Do you know who you want to assign as the primary holder of: {duty}?")
-    check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
-    if check_for_assignment == "Yes":
-        print(f"Who's going to be the primary for: {duty}?")
-        primary_holder = pyip.inputMenu(personnel, numbered=True)
-        holder = "PRIMARY"
-        write_letter(duty, primary_holder, holder, signing_officer)
-    else:
-        come_back_to_duties.append([duty, "PRIMARY"])
+# Ask if the user wants to redo the letter for every duty, or if they would like to generate just a select
+# few letters.
+print("Are you redoing all of the assignment letters, or just a few?")
+users_choice = pyip.inputMenu(["Just a few", "All of them"], numbered=True)
 
-    print(f"Do you know who you want to assign as the secondary holder of: {duty}?")
-    check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
-    if check_for_assignment == "Yes":
-        print(f"Who's going to be the secondary for: {duty}?")
-        primary_holder = pyip.inputMenu(personnel, numbered=True)
-        holder = "SECONDARY"
-        write_letter(duty, primary_holder, holder, signing_officer)
-    else:
-        come_back_to_duties.append([duty, "SECONDARY"])
+if users_choice == "Just a few":
+    chosen_duties = get_chosen_duties(duties)
+    for duty in chosen_duties:
+        write_letter(duty[0], chose_member(f"Which member do you want to assign to: {duty[0]}", personnel), duty[1],
+                     signing_officer)
+else:
+    # Run loop until every duty, both primary and secondary, is accounted for.
+    for duty in duties:
+        print(f"Do you know who you want to assign as the primary holder of: {duty}?")
+        check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
+        if check_for_assignment == "Yes":
+            primary_holder = chose_member(f"Who's going to be the primary for: {duty}?", personnel)
+            holder = "PRIMARY"
+            write_letter(duty, primary_holder, holder, signing_officer)
+        else:
+            come_back_to_duties.append([duty, "PRIMARY"])
 
-# Make an Excel of duties that still need members assigned.
-duties_left_wb = openpyxl.Workbook()
-ws = duties_left_wb.active
-row_to_write_to = 2
-ws['A1'] = "Unassigned Duties"
-ws['B1'] = "Primary/Secondary"
-for entry in come_back_to_duties:
-    ws[f'A{row_to_write_to}'] = entry[0]
-    ws[f'B{row_to_write_to}'] = entry[1]
-    row_to_write_to += 1
+        print(f"Do you know who you want to assign as the secondary holder of: {duty}?")
+        check_for_assignment = pyip.inputMenu(["Yes", "No"], numbered=True)
+        if check_for_assignment == "Yes":
+            primary_holder = chose_member(f"Who's going to be the secondary for: {duty}?", personnel)
+            holder = "SECONDARY"
+            write_letter(duty, primary_holder, holder, signing_officer)
+        else:
+            come_back_to_duties.append([duty, "SECONDARY"])
 
-duties_left_wb.save("duties_left.xlsx")
-duties_left_wb.close()
+    # Make an Excel of duties that still need members assigned.
+    duties_left_wb = openpyxl.Workbook()
+    ws = duties_left_wb.active
+    row_to_write_to = 2
+    ws['A1'] = "Unassigned Duties"
+    ws['B1'] = "Primary/Secondary"
+    for entry in come_back_to_duties:
+        ws[f'A{row_to_write_to}'] = entry[0]
+        ws[f'B{row_to_write_to}'] = entry[1]
+        row_to_write_to += 1
 
-# write_letter('Crash Cart Coordinator', 'HM2 Kemp', 'PRIMARY', signing_officer)
-
-
+    duties_left_wb.save("duties_left.xlsx")
+    duties_left_wb.close()
