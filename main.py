@@ -15,13 +15,14 @@ from docx.enum.style import WD_STYLE_TYPE
 from datetime import date
 
 
+MAX_LINE_LENGTH = 28
+
 def choose_workbook(message):
     """Asking the user to clarify which excel correlates to personnel or duties list"""
     files = glob.glob('*xlsx')
     print(message)
     output = pyip.inputMenu(files, numbered=True)
     return output
-
 
 def get_personnel():
     """Reading the current personnel from the provided Excel sheet."""
@@ -59,7 +60,6 @@ def get_officers_name():
         double_check = pyip.inputMenu(['Yes', 'No'], numbered=True)
         if double_check == 'Yes':
             correct_officer = True
-
     return output
 
 def chose_member(message, list_of_members):
@@ -90,6 +90,25 @@ def get_chosen_duties(duties):
             member_is_picking_duties = False
     return output
 
+def split_line(duty):
+    """In order to ensure formatting with long duty names, we're going to split long duty names into two lines."""
+    strings = duty.split()
+    first_line = strings[0]
+    string_count = 1
+    for i in range(1, len(strings) + 1):
+        if len(first_line) + len(strings[i]) + 1 < MAX_LINE_LENGTH:
+            first_line = first_line + " " + strings[i]
+            string_count += 1
+        else:
+            break
+
+    second_line = strings[string_count]
+    if len(strings) > string_count:
+
+        for i in range(string_count + 1, len(strings)):
+            second_line = second_line + " " + strings[i]
+
+    return f"{first_line}\n          {second_line}"
 
 def write_letter(duty, member, holder, officer):
     """Writing the actual appointment letter with the individualized duty, member, and current date."""
@@ -113,8 +132,12 @@ def write_letter(duty, member, holder, officer):
                                           f"Leading Chief Petty Officer, Pharmacy Department")
     from_paragraph.style = letter.styles['Times New Roman']
 
-    sub_paragraph = letter.add_paragraph(f"Subj:  APPOINTMENT AS {holder.upper()} {duty.upper()}")
-    sub_paragraph.style = letter.styles['Times New Roman']
+    if len(duty) < MAX_LINE_LENGTH:
+        sub_paragraph = letter.add_paragraph(f"Subj:  APPOINTMENT AS {holder.upper()} {duty.upper()}")
+        sub_paragraph.style = letter.styles['Times New Roman']
+    else:
+        sub_paragraph = letter.add_paragraph(f"Subj:  APPOINTMENT AS {holder.upper()} {split_line(duty).upper()}")
+        sub_paragraph.style = letter.styles['Times New Roman']
 
     ref_paragraph = letter.add_paragraph("Ref:    (a) NMRTC PHARMACY DEPARTMENT COLLATERAL DUTY \n\t    EXPECTATIONS\n"
                                          "           (b) NMRTC PHARMACY DEPARTMENT PERSONAL QUALIFICATION\n           "
@@ -158,7 +181,7 @@ def write_letter(duty, member, holder, officer):
 personnel = []
 duties = []
 
-# Another list in-case there are duties that aren't yet filled.
+# A list in-case there are duties that aren't yet assigned.
 come_back_to_duties = []
 
 # Populate lists from Excel.
