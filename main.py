@@ -6,6 +6,7 @@
 import calendar
 import pyinputplus as pyip
 import openpyxl
+from openpyxl.styles import Font
 import docx
 import glob
 import re
@@ -108,7 +109,7 @@ def split_line(duty):
         for i in range(string_count + 1, len(strings)):
             second_line = second_line + " " + strings[i]
 
-    return f"{first_line}\n          {second_line}"
+    return f"{first_line}\n\t{second_line}"
 
 def write_letter(duty, member, holder, officer):
     """Writing the actual appointment letter with the individualized duty, member, and current date."""
@@ -127,21 +128,22 @@ def write_letter(duty, member, holder, officer):
     memorandum_paragraph.add_run('MEMORANDUM').bold = True
     memorandum_paragraph.style = letter.styles['Times New Roman']
 
-    from_paragraph = letter.add_paragraph(f"From: Division Officer, Pharmacy Department, Navy Medicine Readiness and "
-                                          f"Training\n           Command Lemoore\nTo:     {member}, USN\nVia:    "
-                                          f"Leading Chief Petty Officer, Pharmacy Department")
+    from_paragraph = letter.add_paragraph()
+    from_paragraph.add_run("From:\tDivision Officer, Pharmacy Department, Navy Medicine Readiness and Training\n"
+                            f"\tCommand Lemoore\nTo:\t{member}, USN\nVia:\tLeading Chief Petty Officer, Pharmacy "
+                           f"Department")
     from_paragraph.style = letter.styles['Times New Roman']
 
     if len(duty) < MAX_LINE_LENGTH:
-        sub_paragraph = letter.add_paragraph(f"Subj:  APPOINTMENT AS {holder.upper()} {duty.upper()}")
+        sub_paragraph = letter.add_paragraph(f"Subj:\tAPPOINTMENT AS {holder.upper()} {duty.upper()}")
         sub_paragraph.style = letter.styles['Times New Roman']
     else:
-        sub_paragraph = letter.add_paragraph(f"Subj:  APPOINTMENT AS {holder.upper()} {split_line(duty).upper()}")
+        sub_paragraph = letter.add_paragraph(f"Subj:\tAPPOINTMENT AS {holder.upper()} {split_line(duty).upper()}")
         sub_paragraph.style = letter.styles['Times New Roman']
 
-    ref_paragraph = letter.add_paragraph("Ref:    (a) NMRTC PHARMACY DEPARTMENT COLLATERAL DUTY \n\t    EXPECTATIONS\n"
-                                         "           (b) NMRTC PHARMACY DEPARTMENT PERSONAL QUALIFICATION\n           "
-                                         "     STANDARDS")
+    ref_paragraph = letter.add_paragraph("Ref:\t(a) NMRTC PHARMACY DEPARTMENT COLLATERAL DUTY \n\t     EXPECTATIONS\n"
+                                         "\t(b) NMRTC PHARMACY DEPARTMENT PERSONAL QUALIFICATION\n           "
+                                         "      STANDARDS")
     ref_paragraph.style = letter.styles['Times New Roman']
 
     bullet_one_paragraph = letter.add_paragraph()

@@ -1,0 +1,8 @@
+et-xmlfile==1.1.0
+lxml==4.6.3
+openpyxl==3.0.7
+pkg-resources==0.0.0
+PyInputPlus==0.2.12
+PySimpleValidate==0.2.12
+python-docx==0.8.11
+stdiomask==0.0.6
